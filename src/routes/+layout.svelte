@@ -39,8 +39,7 @@ function closeMenu() {
 {#if data.user}
 <header class="topbar">
 	<a href="/" class="wordmark" onclick={closeMenu}>
-		<Logo size={30} />
-		Git<mark>Skit</mark>
+		<Logo size={40} />
 	</a>
 	<nav class="nav desktop-nav" aria-label="Primary navigation">
 		{#each appLinks as link}
@@ -73,8 +72,7 @@ function closeMenu() {
 {:else if !isPublicPage}
 <header class="topbar">
 	<a href="/login" class="wordmark" onclick={closeMenu}>
-		<Logo size={30} />
-		Git<mark>Skit</mark>
+		<Logo size={40} />
 	</a>
 	<nav class="nav desktop-nav">
 		{#each infoLinks as link}
@@ -91,8 +89,7 @@ function closeMenu() {
 {:else}
 <header class="topbar">
 	<a href="/" class="wordmark" onclick={closeMenu}>
-		<Logo size={30} />
-		Git<mark>Skit</mark>
+		<Logo size={40} />
 	</a>
 	<nav class="nav desktop-nav">
 		{#each infoLinks as link}
