@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+Allow: /about
+Allow: /how-to
+Allow: /demo
+
+Disallow: /api/
+Disallow: /login
+Disallow: /logout
+Disallow: /cookies
+
+Sitemap: https://gitscity.xyz/sitemap.xml
