@@ -1,0 +1,12 @@
+{
+  "rewrites": [],
+  "headers": [
+    {
+      "source": "/.well-known/(.*)",
+      "headers": [
+        { "key": "Content-Type", "value": "text/plain" }
+      ]
+    }
+  ],
+  "outputDirectory": "public"
+}
