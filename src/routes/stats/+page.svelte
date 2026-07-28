@@ -12,7 +12,7 @@
 <svelte:head>
 	<title>Stats - GitSkit | Word Frequency Across Your Library</title>
 	<meta name="description" content="Top words, bigrams, and trigrams across all your transcribed video buckets." />
-	<link rel="canonical" href="https://gitscity.xyz/stats" />
+	<link rel="canonical" href="https://gitskit.xyz/stats" />
 </svelte:head>
 
 <section class="hero">

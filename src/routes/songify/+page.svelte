@@ -41,7 +41,7 @@
 <svelte:head>
 	<title>Songify - GitSkit | Turn Transcripts Into Melodies</title>
 	<meta name="description" content="Detect pitch in video clips and arrange them into a melody. Turn any transcript into a song with GitSkit." />
-	<link rel="canonical" href="https://gitscity.xyz/songify" />
+	<link rel="canonical" href="https://gitskit.xyz/songify" />
 </svelte:head>
 
 <section class="hero">

@@ -137,7 +137,7 @@ function closeMenu() {
 			<Logo size={20} />
 			<span>GitSkit</span>
 		</span>
-		<span class="footer-copy">Cut. Clip. Command. &copy; {new Date().getFullYear()} gitscity.xyz</span>
+		<span class="footer-copy">Cut. Clip. Command. &copy; {new Date().getFullYear()} gitskit.xyz</span>
 		<nav class="footer-nav" aria-label="Footer navigation">
 			<a href="/about">About</a>
 			<a href="/how-to">How To</a>

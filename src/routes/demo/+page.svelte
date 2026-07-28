@@ -1,10 +1,10 @@
 <svelte:head>
 	<title>Demo - GitSkit | See It In Action</title>
 	<meta name="description" content="See GitSkit in action. Watch a live demo of video transcript supercuts, sentence builder, and songify features." />
-	<link rel="canonical" href="https://gitscity.xyz/demo" />
+	<link rel="canonical" href="https://gitskit.xyz/demo" />
 	<meta property="og:title" content="GitSkit Demo - See It In Action" />
 	<meta property="og:description" content="Watch a live demo of GitSkit. Supercuts, sentence builder, songify - all from word-level transcripts." />
-	<meta property="og:url" content="https://gitscity.xyz/demo" />
+	<meta property="og:url" content="https://gitskit.xyz/demo" />
 </svelte:head>
 
 <section class="hero">

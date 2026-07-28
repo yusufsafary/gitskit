@@ -70,7 +70,7 @@
 <svelte:head>
 	<title>Transcribe - GitSkit | Word-Level Video Transcription</title>
 	<meta name="description" content="Transcribe your videos with xAI speech-to-text. Get precise word-level timestamps for every clip in your library." />
-	<link rel="canonical" href="https://gitscity.xyz/transcribe" />
+	<link rel="canonical" href="https://gitskit.xyz/transcribe" />
 </svelte:head>
 
 <section class="hero">

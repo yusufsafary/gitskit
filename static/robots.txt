@@ -9,4 +9,4 @@ Disallow: /login
 Disallow: /logout
 Disallow: /cookies
 
-Sitemap: https://gitscity.xyz/sitemap.xml
+Sitemap: https://gitskit.xyz/sitemap.xml

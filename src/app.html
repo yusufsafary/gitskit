@@ -3,29 +3,31 @@
 <head>
 <meta charset="utf-8" />
 <link rel="icon" href="%sveltekit.assets%/favicon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="%sveltekit.assets%/logo.png" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <meta name="theme-color" content="#050508" />
 <meta name="description" content="GitSkit - Cut. Clip. Command. Self-hosted video transcript supercut studio for creators and developers. Transcribe, search, and render clips with surgical precision." />
 <meta name="robots" content="index, follow" />
 <meta name="author" content="GitSkit" />
-<link rel="canonical" href="https://gitscity.xyz" />
+<link rel="canonical" href="https://gitskit.xyz" />
 
 <!-- Open Graph -->
 <meta property="og:site_name" content="GitSkit" />
 <meta property="og:type" content="website" />
 <meta property="og:title" content="GitSkit - Cut. Clip. Command." />
 <meta property="og:description" content="Self-hosted video transcript supercut studio. Transcribe videos with xAI, search word-level clips, and render supercuts in seconds." />
-<meta property="og:image" content="https://gitscity.xyz/og.png" />
+<meta property="og:image" content="https://gitskit.xyz/og.png" />
 <meta property="og:image:width" content="1200" />
 <meta property="og:image:height" content="630" />
-<meta property="og:url" content="https://gitscity.xyz" />
+<meta property="og:url" content="https://gitskit.xyz" />
 <meta property="og:locale" content="en_US" />
 
 <!-- Twitter / X -->
 <meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:site" content="@gitskit" />
 <meta name="twitter:title" content="GitSkit - Cut. Clip. Command." />
 <meta name="twitter:description" content="Self-hosted video transcript supercut studio. Transcribe, search, and render clips with surgical precision." />
-<meta name="twitter:image" content="https://gitscity.xyz/og.png" />
+<meta name="twitter:image" content="https://gitskit.xyz/og.png" />
 
 <!-- Structured Data -->
 <script type="application/ld+json">
@@ -33,10 +35,17 @@
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
   "name": "GitSkit",
-  "url": "https://gitscity.xyz",
-  "description": "Self-hosted video transcript supercut studio for creators and developers. Cut, clip, and command your media library.",
+  "url": "https://gitskit.xyz",
+  "description": "Self-hosted video transcript supercut studio for creators and developers. Cut, clip, and command your media library with word-level precision using xAI speech-to-text.",
   "applicationCategory": "MultimediaApplication",
+  "applicationSubCategory": "VideoEditing",
   "operatingSystem": "Web",
+  "softwareVersion": "1.0.0",
+  "license": "https://opensource.org/licenses/MIT",
+  "codeRepository": "https://github.com/yusufsafary/gitskit",
+  "keywords": "video transcript, supercut studio, word-level transcription, xAI, SvelteKit, Solana, open source",
+  "image": "https://gitskit.xyz/og.png",
+  "screenshot": "https://gitskit.xyz/og.png",
   "offers": {
     "@type": "Offer",
     "price": "0",
@@ -45,7 +54,33 @@
   "author": {
     "@type": "Organization",
     "name": "GitSkit",
-    "url": "https://gitscity.xyz"
+    "url": "https://gitskit.xyz",
+    "sameAs": ["https://github.com/yusufsafary/gitskit"]
+  },
+  "featureList": [
+    "Word-level video transcription via xAI speech-to-text",
+    "Supercut generation from phrase or regex patterns",
+    "Sentence builder from individual clip words",
+    "Songify mode with pitch detection",
+    "Solana wallet authentication",
+    "Self-hosted with no cloud video storage"
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "name": "GitSkit",
+  "url": "https://gitskit.xyz",
+  "description": "Self-hosted video transcript supercut studio.",
+  "potentialAction": {
+    "@type": "SearchAction",
+    "target": {
+      "@type": "EntryPoint",
+      "urlTemplate": "https://gitskit.xyz/supercut?q={search_term_string}"
+    },
+    "query-input": "required name=search_term_string"
   }
 }
 </script>

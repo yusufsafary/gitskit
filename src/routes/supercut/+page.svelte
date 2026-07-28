@@ -79,7 +79,7 @@
 <svelte:head>
 	<title>Supercut - GitSkit | Build Video Supercuts From Transcripts</title>
 	<meta name="description" content="Clip every match of a phrase, regex, or AI pattern across your video library. GitSkit renders supercuts from word-level transcripts in seconds." />
-	<link rel="canonical" href="https://gitscity.xyz/supercut" />
+	<link rel="canonical" href="https://gitskit.xyz/supercut" />
 </svelte:head>
 
 <section class="hero">

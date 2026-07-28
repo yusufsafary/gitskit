@@ -50,7 +50,7 @@
 <svelte:head>
 	<title>Clips Library - GitSkit | Browse Your Rendered Clips</title>
 	<meta name="description" content="Browse, preview, and download every rendered clip from your GitSkit library." />
-	<link rel="canonical" href="https://gitscity.xyz/clips" />
+	<link rel="canonical" href="https://gitskit.xyz/clips" />
 </svelte:head>
 
 <section class="hero">

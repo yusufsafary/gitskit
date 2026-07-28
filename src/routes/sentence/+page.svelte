@@ -42,7 +42,7 @@
 <svelte:head>
 	<title>Sentence Builder - GitSkit | Make Anyone Say Anything</title>
 	<meta name="description" content="Pick one clip per word from transcripts and stitch them together. Build any sentence from your video library." />
-	<link rel="canonical" href="https://gitscity.xyz/sentence" />
+	<link rel="canonical" href="https://gitskit.xyz/sentence" />
 </svelte:head>
 
 <section class="hero">

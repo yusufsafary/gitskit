@@ -1,7 +1,7 @@
 <svelte:head>
 	<title>How To Use GitSkit - Setup Guide</title>
 	<meta name="description" content="Step-by-step guide to setting up GitSkit. Clone the repo, configure your environment, add your videos, and start building supercuts." />
-	<link rel="canonical" href="https://gitscity.xyz/how-to" />
+	<link rel="canonical" href="https://gitskit.xyz/how-to" />
 </svelte:head>
 
 <section class="hero">

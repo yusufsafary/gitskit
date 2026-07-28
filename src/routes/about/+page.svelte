@@ -1,7 +1,7 @@
 <svelte:head>
 	<title>About GitSkit - Video Transcript Supercut Studio</title>
 	<meta name="description" content="GitSkit is a self-hosted video transcript supercut studio. Cut, clip, and command your media library with word-level precision." />
-	<link rel="canonical" href="https://gitscity.xyz/about" />
+	<link rel="canonical" href="https://gitskit.xyz/about" />
 </svelte:head>
 
 <section class="hero">
