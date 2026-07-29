@@ -77,116 +77,169 @@ onMount(() => {
 	const ctx = canvas.getContext('2d');
 	if (!ctx) return;
 
-	const COLORS = ['#6eff57', '#a855f7', '#00c8ff'];
-	const TERMS = [
-		'00:00:00:00', '01:23:45:12', '00:12:34:08', '23:59:59:29',
-		'TRANSCRIBE', 'SUPERCUT', 'CLIP', 'RENDER', 'CUT', 'SYNC',
-		'▶ PLAY', '■ STOP', '● REC', '◀◀ REW', '▶▶ FFW',
-		'fps:24', 'fps:30', 'fps:60', 'ch:2', 'kHz:48',
-		'WAVEFORM', 'FFT', 'PCM', 'MP4', 'WEBM', 'AAC',
-		'[0x00]', '[0xFF]', 'SEEK', 'TRIM', 'MERGE', 'MUTE',
-	];
+	// Palette — matches design tokens
+	const C_GREEN  = [110, 255,  87] as const;
+	const C_PURPLE = [168,  85, 247] as const;
+	const C_BLUE   = [  0, 200, 255] as const;
 
-	interface Particle {
-		x: number; y: number;
-		text: string;
-		color: string;
-		speed: number;
-		opacity: number;
-		size: number;
-		trail: Array<{ x: number; y: number; opacity: number }>;
-	}
-
-	let particles: Particle[] = [];
+	let W = 0, H = 0, dpr = 1;
 	let raf: number;
-	let W = 0, H = 0;
 
 	function resize() {
-		W = canvas.offsetWidth;
-		H = canvas.offsetHeight;
-		canvas.width = W;
-		canvas.height = H;
+		dpr = Math.min(window.devicePixelRatio || 1, 2);
+		W   = canvas.offsetWidth;
+		H   = canvas.offsetHeight;
+		canvas.width  = Math.round(W * dpr);
+		canvas.height = Math.round(H * dpr);
+		ctx.scale(dpr, dpr);
 	}
 
-	function spawn(): Particle {
-		const color = COLORS[Math.floor(Math.random() * COLORS.length)];
-		return {
-			x: Math.random() * W,
-			y: -30,
-			text: TERMS[Math.floor(Math.random() * TERMS.length)],
-			color,
-			speed: 0.35 + Math.random() * 0.9,
-			opacity: 0.08 + Math.random() * 0.22,
-			size: 9 + Math.random() * 7,
-			trail: [],
-		};
-	}
+	// ── Ambient orbs — 3 large blurred glows that breathe & drift ──
+	const orbs = [
+		{ rx: 0.12, ry: 0.35, r: 200, pal: C_GREEN,  ph: 0.0,  sp: 0.00042, dx: 0.13, dy: 0.11 },
+		{ rx: 0.85, ry: 0.28, r: 260, pal: C_PURPLE, ph: 1.85, sp: 0.00031, dx: 0.09, dy: 0.14 },
+		{ rx: 0.52, ry: 0.78, r: 180, pal: C_BLUE,   ph: 3.60, sp: 0.00055, dx: 0.17, dy: 0.08 },
+	];
 
-	resize();
-	// seed initial particles spread across the canvas
-	for (let i = 0; i < 28; i++) {
-		const p = spawn();
-		p.y = Math.random() * H;
-		particles.push(p);
-	}
+	// ── Film strip geometry ──────────────────────────────────────
+	const SW   = 24;   // strip width px
+	const PH   = 11;   // perforation height
+	const PW   = 7;    // perforation width
+	const PGAP = 26;   // perforation pitch
 
-	let lastSpawn = 0;
 	function draw(ts: number) {
 		ctx.clearRect(0, 0, W, H);
+		const t = ts * 0.001;
 
-		// draw scanlines
-		for (let y = 0; y < H; y += 4) {
-			ctx.fillStyle = 'rgba(0,0,0,0.06)';
-			ctx.fillRect(0, y, W, 1);
+		// 1 ── Ambient glowing orbs ──────────────────────────────
+		for (const o of orbs) {
+			const pulse = Math.sin(t * o.sp * 1000 + o.ph);
+			const gx    = o.rx * W + Math.sin(t * o.dx + o.ph) * 28;
+			const gy    = o.ry * H + Math.cos(t * o.dy + o.ph) * 18;
+			const r     = o.r  + pulse * 18;
+			const alpha = 0.055 + pulse * 0.018 + 0.015;
+			const [R, G, B] = o.pal;
+			const grad = ctx.createRadialGradient(gx, gy, 0, gx, gy, r);
+			grad.addColorStop(0,   `rgba(${R},${G},${B},${alpha})`);
+			grad.addColorStop(0.5, `rgba(${R},${G},${B},${(alpha * 0.38).toFixed(3)})`);
+			grad.addColorStop(1,   `rgba(${R},${G},${B},0)`);
+			ctx.fillStyle = grad;
+			ctx.beginPath();
+			ctx.ellipse(gx, gy, r, r * 0.72, 0, 0, Math.PI * 2);
+			ctx.fill();
 		}
 
-		if (ts - lastSpawn > 320) {
-			if (particles.length < 42) particles.push(spawn());
-			lastSpawn = ts;
+		// 2 ── Film strips (left = green, right = purple) ─────────
+		const perfOffset = (t * 14) % PGAP;
+
+		// Left strip
+		ctx.fillStyle = 'rgba(110,255,87,0.06)';
+		ctx.fillRect(0, 0, SW, H);
+		for (let y = -PGAP + perfOffset; y < H + PGAP; y += PGAP) {
+			const ry    = Math.round(y);
+			const frame = ((Math.floor((y + t * 14) / PGAP) + 4096) & 0xFFF);
+			ctx.fillStyle = 'rgba(110,255,87,0.22)';
+			ctx.fillRect(SW - PW - 4, ry + 2, PW, PH);
+			ctx.fillStyle = 'rgba(110,255,87,0.15)';
+			ctx.font      = '500 5.5px "JetBrains Mono",monospace';
+			ctx.textAlign = 'left';
+			ctx.fillText(frame.toString(16).toUpperCase().padStart(3,'0'), 2, ry + PH);
+		}
+		// Separator line
+		ctx.fillStyle = 'rgba(110,255,87,0.12)';
+		ctx.fillRect(SW, 0, 1, H);
+
+		// Right strip
+		ctx.fillStyle = 'rgba(168,85,247,0.06)';
+		ctx.fillRect(W - SW, 0, SW, H);
+		for (let y = -PGAP + perfOffset; y < H + PGAP; y += PGAP) {
+			const ry = Math.round(y);
+			ctx.fillStyle = 'rgba(168,85,247,0.22)';
+			ctx.fillRect(W - SW + 4, ry + 2, PW, PH);
+		}
+		ctx.fillStyle = 'rgba(168,85,247,0.12)';
+		ctx.fillRect(W - SW - 1, 0, 1, H);
+
+		// 3 ── Audio waveforms ────────────────────────────────────
+		const wY  = H * 0.74;
+		const wAm = H * 0.07;
+
+		// Primary — green
+		ctx.beginPath();
+		const wInner = W - SW * 2 - 2;
+		for (let i = 0; i <= wInner; i++) {
+			const nx = i / wInner;
+			const y  = wY
+				+ Math.sin(nx * Math.PI *  6 + t * 2.2) * wAm * 0.48
+				+ Math.sin(nx * Math.PI * 14 + t * 3.9) * wAm * 0.22
+				+ Math.sin(nx * Math.PI *  3 + t * 1.1) * wAm * 0.32;
+			i === 0 ? ctx.moveTo(SW + 1 + i, y) : ctx.lineTo(SW + 1 + i, y);
+		}
+		ctx.strokeStyle   = 'rgba(110,255,87,0.5)';
+		ctx.lineWidth     = 1.5;
+		ctx.shadowColor   = 'rgba(110,255,87,0.7)';
+		ctx.shadowBlur    = 7;
+		ctx.stroke();
+		ctx.shadowBlur = 0;
+
+		// Secondary — blue, offset up
+		ctx.beginPath();
+		for (let i = 0; i <= wInner; i++) {
+			const nx = i / wInner;
+			const y  = wY - 20
+				+ Math.sin(nx * Math.PI *  9 + t * 1.6 + 1.3) * wAm * 0.28
+				+ Math.sin(nx * Math.PI * 21 + t * 2.9 + 0.5) * wAm * 0.12;
+			i === 0 ? ctx.moveTo(SW + 1 + i, y) : ctx.lineTo(SW + 1 + i, y);
+		}
+		ctx.strokeStyle = 'rgba(0,200,255,0.22)';
+		ctx.lineWidth   = 1;
+		ctx.stroke();
+
+		// 4 ── Horizontal sweep line ───────────────────────────────
+		const sweepT = (t * 0.07) % 1.5;
+		if (sweepT < 1) {
+			const sy = sweepT * H;
+			const sg = ctx.createLinearGradient(0, sy - 14, 0, sy + 14);
+			sg.addColorStop(0,   'rgba(0,200,255,0)');
+			sg.addColorStop(0.5, 'rgba(0,200,255,0.1)');
+			sg.addColorStop(1,   'rgba(0,200,255,0)');
+			ctx.fillStyle = sg;
+			ctx.fillRect(SW, sy - 14, W - SW * 2, 28);
 		}
 
-		particles = particles.filter((p) => p.y < H + 40);
+		// 5 ── Timecode HUD ────────────────────────────────────────
+		const fr  = Math.floor(ts / (1000 / 24)) % 24;
+		const ss  = Math.floor(ts / 1000) % 60;
+		const mm  = Math.floor(ts / 60000) % 60;
+		const hh  = Math.floor(ts / 3600000) % 24;
+		const tc  = `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}:${String(ss).padStart(2,'0')}:${String(fr).padStart(2,'0')}`;
+		ctx.font       = '600 9px "JetBrains Mono",monospace';
+		ctx.fillStyle  = 'rgba(110,255,87,0.4)';
+		ctx.textAlign  = 'right';
+		ctx.fillText(tc, W - SW - 5, H - 7);
 
-		for (const p of particles) {
-			p.trail.unshift({ x: p.x, y: p.y, opacity: p.opacity });
-			if (p.trail.length > 6) p.trail.pop();
-			p.y += p.speed;
-
-			// trail
-			for (let i = 0; i < p.trail.length; i++) {
-				const t = p.trail[i];
-				ctx.globalAlpha = t.opacity * (1 - i / p.trail.length) * 0.5;
-				ctx.fillStyle = p.color;
-				ctx.font = `${p.size * 0.85}px 'JetBrains Mono', monospace`;
-				ctx.fillText(p.text, t.x, t.y);
-			}
-
-			// main text
-			ctx.globalAlpha = p.opacity;
-			ctx.fillStyle = p.color;
-			ctx.font = `${p.size}px 'JetBrains Mono', monospace`;
-			ctx.fillText(p.text, p.x, p.y);
+		// ● REC blink
+		if (Math.floor(ts / 700) % 2 === 0) {
+			ctx.fillStyle = 'rgba(255,71,87,0.65)';
+			ctx.textAlign = 'left';
+			ctx.fillText('● REC', SW + 6, H - 7);
 		}
+		ctx.textAlign = 'left';
 
-		// waveform bars along bottom
-		const bars = 80;
-		const bw = W / bars;
-		for (let i = 0; i < bars; i++) {
-			const amp = (Math.sin(ts * 0.001 + i * 0.4) + Math.sin(ts * 0.0017 + i * 0.7)) * 0.5;
-			const bh = 8 + Math.abs(amp) * 18;
-			const col = COLORS[i % COLORS.length];
-			ctx.globalAlpha = 0.12 + Math.abs(amp) * 0.1;
-			ctx.fillStyle = col;
-			ctx.fillRect(i * bw, H - bh, bw - 1, bh);
-		}
+		// 6 ── Vignette ───────────────────────────────────────────
+		const vig = ctx.createRadialGradient(W / 2, H / 2, H * 0.18, W / 2, H / 2, H * 0.9);
+		vig.addColorStop(0, 'rgba(3,3,7,0)');
+		vig.addColorStop(1, 'rgba(3,3,7,0.6)');
+		ctx.fillStyle = vig;
+		ctx.fillRect(0, 0, W, H);
 
-		ctx.globalAlpha = 1;
 		raf = requestAnimationFrame(draw);
 	}
 
+	resize();
 	raf = requestAnimationFrame(draw);
 
-	const ro = new ResizeObserver(resize);
+	const ro = new ResizeObserver(() => { ctx.setTransform(1,0,0,1,0,0); resize(); });
 	ro.observe(canvas);
 
 	return () => {
@@ -205,13 +258,15 @@ onMount(() => {
 <section class="hero hero-animated">
 	<canvas bind:this={heroCanvas} class="hero-canvas" aria-hidden="true"></canvas>
 	<div class="hero-content">
-		<div class="hero-eyebrow hero-anim-up" style="--delay:0ms">
+		<div class="hero-eyebrow hero-anim-slide" style="--delay:0ms">
 			<span class="tag tag-accent">Studio</span>
 			<span class="tag tag-blue">{data.groups.length} buckets</span>
 		</div>
-		<h1 class="hero-anim-up" style="--delay:80ms">The <mark>Library</mark>.</h1>
-		<p class="hero-anim-up" style="--delay:180ms">Every video, its audio, and word-level transcript — grouped by bucket.</p>
+		<h1 class="hero-anim-reveal" style="--delay:90ms">The <mark class="hero-mark">Library</mark>.</h1>
+		<p class="hero-anim-converge" style="--delay:220ms">Every video, its audio, and word-level transcript — grouped by bucket.</p>
 	</div>
+	<div class="hero-corner hero-corner-tl" aria-hidden="true"></div>
+	<div class="hero-corner hero-corner-br" aria-hidden="true"></div>
 </section>
 
 <!-- Stats -->
@@ -359,14 +414,32 @@ onMount(() => {
 {/if}
 
 <style>
-/* ── Hero animated layout ───────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════════
+   Hero — animated cinematic block
+   ══════════════════════════════════════════════════════════════ */
+
 .hero-animated {
 	position: relative;
 	overflow: hidden;
-	border-radius: 12px;
-	padding: 2.5rem 2rem 2rem;
-	background: linear-gradient(135deg, rgba(10,10,18,0.92) 0%, rgba(3,3,7,0.96) 100%);
-	border: 1px solid rgba(110,255,87,0.08);
+	border-radius: var(--radius-xl);
+	padding: clamp(2rem, 5vw, 4rem) clamp(1.75rem, 5vw, 3rem) clamp(2rem, 5vw, 3.5rem);
+	min-height: 220px;
+	background:
+		linear-gradient(160deg, rgba(110,255,87,0.04) 0%, transparent 40%),
+		linear-gradient(200deg, rgba(168,85,247,0.04) 60%, transparent 100%),
+		var(--bg-2);
+	border: 1px solid rgba(110,255,87,0.12);
+	/* animated border glow via box-shadow */
+	box-shadow:
+		0 0 0 0 rgba(110,255,87,0),
+		0 4px 40px rgba(0,0,0,0.5),
+		inset 0 1px 0 rgba(255,255,255,0.04);
+	animation: heroBorderPulse 5s ease-in-out infinite;
+}
+
+@keyframes heroBorderPulse {
+	0%, 100% { box-shadow: 0 0 28px -4px rgba(110,255,87,0.08), 0 4px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04); }
+	50%       { box-shadow: 0 0 48px -2px rgba(110,255,87,0.18), 0 4px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04); }
 }
 
 .hero-canvas {
@@ -376,7 +449,6 @@ onMount(() => {
 	height: 100%;
 	pointer-events: none;
 	z-index: 0;
-	opacity: 0.85;
 }
 
 .hero-content {
@@ -386,26 +458,90 @@ onMount(() => {
 	gap: 1.25rem;
 }
 
-/* ── Text entrance animations ───────────────────────────────── */
-@keyframes heroUp {
-	from { opacity: 0; transform: translateY(22px); }
-	to   { opacity: 1; transform: translateY(0); }
+/* ── Corner bracket decorations ─────────────────────────────── */
+.hero-corner {
+	position: absolute;
+	width: 18px;
+	height: 18px;
+	z-index: 2;
+	pointer-events: none;
+	opacity: 0;
+	animation: cornerFadeIn 0.6s ease forwards 0.8s;
 }
 
-.hero-anim-up {
+@keyframes cornerFadeIn {
+	to { opacity: 1; }
+}
+
+.hero-corner-tl {
+	top: 10px; left: 10px;
+	border-top: 1.5px solid rgba(110,255,87,0.5);
+	border-left: 1.5px solid rgba(110,255,87,0.5);
+}
+
+.hero-corner-br {
+	bottom: 10px; right: 10px;
+	border-bottom: 1.5px solid rgba(168,85,247,0.5);
+	border-right: 1.5px solid rgba(168,85,247,0.5);
+}
+
+/* ── Eyebrow: slide in from left ─────────────────────────────── */
+@keyframes heroSlide {
+	from { opacity: 0; transform: translateX(-16px); filter: blur(4px); }
+	to   { opacity: 1; transform: translateX(0);     filter: blur(0); }
+}
+
+.hero-anim-slide {
 	opacity: 0;
-	animation: heroUp 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+	animation: heroSlide 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 	animation-delay: var(--delay, 0ms);
 }
 
-/* ── h1 shimmer on the mark ─────────────────────────────────── */
-@keyframes markShimmer {
-	0%, 100% { box-shadow: 0 0 0 0 rgba(110,255,87,0); }
-	50%       { box-shadow: 0 0 18px 4px rgba(110,255,87,0.35); }
+/* ── H1: clip-path wipe reveal from bottom ───────────────────── */
+@keyframes heroReveal {
+	from { clip-path: inset(110% 0 0 0); transform: translateY(10px); }
+	to   { clip-path: inset(0%   0 0 0); transform: translateY(0); }
 }
 
-.hero-content h1 mark {
-	animation: markShimmer 3s ease-in-out infinite 1s;
+.hero-anim-reveal {
+	clip-path: inset(110% 0 0 0);
+	animation: heroReveal 0.72s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+	animation-delay: var(--delay, 0ms);
+}
+
+/* ── Subtitle: letter-spacing converge + fade ────────────────── */
+@keyframes heroConverge {
+	from { opacity: 0; letter-spacing: 0.22em; filter: blur(3px); }
+	60%  { opacity: 0.9; }
+	to   { opacity: 1; letter-spacing: inherit; filter: blur(0); }
+}
+
+.hero-anim-converge {
+	opacity: 0;
+	animation: heroConverge 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+	animation-delay: var(--delay, 0ms);
+}
+
+/* ── Mark: glitch settle → steady pulse ─────────────────────── */
+@keyframes markGlitch {
+	0%        { text-shadow: none; transform: none; }
+	/* initial glitch burst */
+	5%        { text-shadow: -2px 0 rgba(168,85,247,0.9), 2px 0 rgba(0,200,255,0.9); transform: translateX(2px) skewX(-2deg); }
+	6%        { text-shadow:  2px 0 rgba(168,85,247,0.9),-2px 0 rgba(0,200,255,0.9); transform: translateX(-2px); }
+	7%        { text-shadow: -1px 0 rgba(168,85,247,0.6); transform: translateX(1px); }
+	8%        { text-shadow: none; transform: none; }
+	/* late random micro-glitch */
+	72%       { text-shadow: none; transform: none; }
+	72.5%     { text-shadow: -1px 0 rgba(168,85,247,0.7), 1px 0 rgba(0,200,255,0.7); transform: translateX(1px); }
+	73%       { text-shadow: none; transform: none; }
+	/* gentle continuous shimmer */
+	0%, 100%  { box-shadow: 0 0 0 0 rgba(110,255,87,0); }
+	50%       { box-shadow: 0 0 22px 5px rgba(110,255,87,0.38); }
+}
+
+.hero-mark {
+	animation: markGlitch 6s ease-in-out infinite 1.1s;
+	display: inline-block; /* needed for transform */
 }
 
 .hero-eyebrow {
