@@ -1,6 +1,7 @@
 <script lang="ts">
 import type { PageData } from './$types';
 import { invalidateAll, goto } from '$app/navigation';
+import { onMount } from 'svelte';
 
 let { data }: { data: PageData } = $props();
 
@@ -67,6 +68,132 @@ const totalHours = $derived(data.totals.totalDurationSec / 3600);
 const transcribeRate = $derived(
 	data.totals.videos > 0 ? Math.round((data.totals.transcribed / data.totals.videos) * 100) : 0
 );
+
+let heroCanvas: HTMLCanvasElement;
+
+onMount(() => {
+	const canvas = heroCanvas;
+	if (!canvas) return;
+	const ctx = canvas.getContext('2d');
+	if (!ctx) return;
+
+	const COLORS = ['#6eff57', '#a855f7', '#00c8ff'];
+	const TERMS = [
+		'00:00:00:00', '01:23:45:12', '00:12:34:08', '23:59:59:29',
+		'TRANSCRIBE', 'SUPERCUT', 'CLIP', 'RENDER', 'CUT', 'SYNC',
+		'▶ PLAY', '■ STOP', '● REC', '◀◀ REW', '▶▶ FFW',
+		'fps:24', 'fps:30', 'fps:60', 'ch:2', 'kHz:48',
+		'WAVEFORM', 'FFT', 'PCM', 'MP4', 'WEBM', 'AAC',
+		'[0x00]', '[0xFF]', 'SEEK', 'TRIM', 'MERGE', 'MUTE',
+	];
+
+	interface Particle {
+		x: number; y: number;
+		text: string;
+		color: string;
+		speed: number;
+		opacity: number;
+		size: number;
+		trail: Array<{ x: number; y: number; opacity: number }>;
+	}
+
+	let particles: Particle[] = [];
+	let raf: number;
+	let W = 0, H = 0;
+
+	function resize() {
+		W = canvas.offsetWidth;
+		H = canvas.offsetHeight;
+		canvas.width = W;
+		canvas.height = H;
+	}
+
+	function spawn(): Particle {
+		const color = COLORS[Math.floor(Math.random() * COLORS.length)];
+		return {
+			x: Math.random() * W,
+			y: -30,
+			text: TERMS[Math.floor(Math.random() * TERMS.length)],
+			color,
+			speed: 0.35 + Math.random() * 0.9,
+			opacity: 0.08 + Math.random() * 0.22,
+			size: 9 + Math.random() * 7,
+			trail: [],
+		};
+	}
+
+	resize();
+	// seed initial particles spread across the canvas
+	for (let i = 0; i < 28; i++) {
+		const p = spawn();
+		p.y = Math.random() * H;
+		particles.push(p);
+	}
+
+	let lastSpawn = 0;
+	function draw(ts: number) {
+		ctx.clearRect(0, 0, W, H);
+
+		// draw scanlines
+		for (let y = 0; y < H; y += 4) {
+			ctx.fillStyle = 'rgba(0,0,0,0.06)';
+			ctx.fillRect(0, y, W, 1);
+		}
+
+		if (ts - lastSpawn > 320) {
+			if (particles.length < 42) particles.push(spawn());
+			lastSpawn = ts;
+		}
+
+		particles = particles.filter((p) => p.y < H + 40);
+
+		for (const p of particles) {
+			p.trail.unshift({ x: p.x, y: p.y, opacity: p.opacity });
+			if (p.trail.length > 6) p.trail.pop();
+			p.y += p.speed;
+
+			// trail
+			for (let i = 0; i < p.trail.length; i++) {
+				const t = p.trail[i];
+				ctx.globalAlpha = t.opacity * (1 - i / p.trail.length) * 0.5;
+				ctx.fillStyle = p.color;
+				ctx.font = `${p.size * 0.85}px 'JetBrains Mono', monospace`;
+				ctx.fillText(p.text, t.x, t.y);
+			}
+
+			// main text
+			ctx.globalAlpha = p.opacity;
+			ctx.fillStyle = p.color;
+			ctx.font = `${p.size}px 'JetBrains Mono', monospace`;
+			ctx.fillText(p.text, p.x, p.y);
+		}
+
+		// waveform bars along bottom
+		const bars = 80;
+		const bw = W / bars;
+		for (let i = 0; i < bars; i++) {
+			const amp = (Math.sin(ts * 0.001 + i * 0.4) + Math.sin(ts * 0.0017 + i * 0.7)) * 0.5;
+			const bh = 8 + Math.abs(amp) * 18;
+			const col = COLORS[i % COLORS.length];
+			ctx.globalAlpha = 0.12 + Math.abs(amp) * 0.1;
+			ctx.fillStyle = col;
+			ctx.fillRect(i * bw, H - bh, bw - 1, bh);
+		}
+
+		ctx.globalAlpha = 1;
+		raf = requestAnimationFrame(draw);
+	}
+
+	raf = requestAnimationFrame(draw);
+
+	const ro = new ResizeObserver(resize);
+	ro.observe(canvas);
+
+	return () => {
+		cancelAnimationFrame(raf);
+		ro.disconnect();
+	};
+});
 </script>
 
 <svelte:head>
@@ -75,13 +202,16 @@ const transcribeRate = $derived(
 	<link rel="canonical" href="https://gitskit.xyz/" />
 </svelte:head>
 
-<section class="hero">
-	<div class="hero-eyebrow">
-		<span class="tag tag-accent">Studio</span>
-		<span class="tag tag-blue">{data.groups.length} buckets</span>
+<section class="hero hero-animated">
+	<canvas bind:this={heroCanvas} class="hero-canvas" aria-hidden="true"></canvas>
+	<div class="hero-content">
+		<div class="hero-eyebrow hero-anim-up" style="--delay:0ms">
+			<span class="tag tag-accent">Studio</span>
+			<span class="tag tag-blue">{data.groups.length} buckets</span>
+		</div>
+		<h1 class="hero-anim-up" style="--delay:80ms">The <mark>Library</mark>.</h1>
+		<p class="hero-anim-up" style="--delay:180ms">Every video, its audio, and word-level transcript — grouped by bucket.</p>
 	</div>
-	<h1>The <mark>Library</mark>.</h1>
-	<p>Every video, its audio, and word-level transcript — grouped by bucket.</p>
 </section>
 
 <!-- Stats -->
@@ -229,6 +359,55 @@ const transcribeRate = $derived(
 {/if}
 
 <style>
+/* ── Hero animated layout ───────────────────────────────────── */
+.hero-animated {
+	position: relative;
+	overflow: hidden;
+	border-radius: 12px;
+	padding: 2.5rem 2rem 2rem;
+	background: linear-gradient(135deg, rgba(10,10,18,0.92) 0%, rgba(3,3,7,0.96) 100%);
+	border: 1px solid rgba(110,255,87,0.08);
+}
+
+.hero-canvas {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	pointer-events: none;
+	z-index: 0;
+	opacity: 0.85;
+}
+
+.hero-content {
+	position: relative;
+	z-index: 1;
+	display: grid;
+	gap: 1.25rem;
+}
+
+/* ── Text entrance animations ───────────────────────────────── */
+@keyframes heroUp {
+	from { opacity: 0; transform: translateY(22px); }
+	to   { opacity: 1; transform: translateY(0); }
+}
+
+.hero-anim-up {
+	opacity: 0;
+	animation: heroUp 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+	animation-delay: var(--delay, 0ms);
+}
+
+/* ── h1 shimmer on the mark ─────────────────────────────────── */
+@keyframes markShimmer {
+	0%, 100% { box-shadow: 0 0 0 0 rgba(110,255,87,0); }
+	50%       { box-shadow: 0 0 18px 4px rgba(110,255,87,0.35); }
+}
+
+.hero-content h1 mark {
+	animation: markShimmer 3s ease-in-out infinite 1s;
+}
+
 .hero-eyebrow {
 	display: flex;
 	align-items: center;
