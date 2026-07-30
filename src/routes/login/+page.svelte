@@ -600,14 +600,23 @@
 	   ═══════════════════════════════════════════════════════════ */
 	.auth-col { display: flex; flex-direction: column; align-items: stretch; }
 
+	/* Terminal entrance — no opacity change so it's always visible (screenshot-safe).
+	   Animation uses transform + blur to "slide into focus" from the right. */
 	.anim-terminal {
-		opacity: 0;
-		transform: translateX(28px) translateY(8px);
-		animation: termEnter 0.7s cubic-bezier(0.16, 1, 0.3, 1) 200ms forwards;
+		animation: termEnter 0.75s cubic-bezier(0.16, 1, 0.3, 1) 180ms both;
 	}
 
 	@keyframes termEnter {
-		to { opacity: 1; transform: translateX(0) translateY(0); }
+		from {
+			transform: translateX(40px) translateY(6px) scale(0.97);
+			filter: blur(6px);
+			opacity: 0.3;
+		}
+		to {
+			transform: none;
+			filter: blur(0);
+			opacity: 1;
+		}
 	}
 
 	.terminal {
