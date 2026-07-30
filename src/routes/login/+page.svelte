@@ -216,16 +216,15 @@
 
 				<!-- Terminal body -->
 				<div class="term-body">
-					<!-- Line 1: auth command — typewriter -->
-					{#if bootStep >= 1}
-						<div class="term-line anim-line">
-							<span class="term-user">gitskit</span><span class="term-at">@</span><span class="term-host">xyz</span><span class="term-sep"> ~ % </span><span class="term-cmd typewriter">auth --wallet</span>
-						</div>
-					{:else}
-						<div class="term-line term-line-ghost">
-							<span class="term-user">gitskit</span><span class="term-at">@</span><span class="term-host">xyz</span><span class="term-sep"> ~ % </span><span class="caret-only">▋</span>
-						</div>
-					{/if}
+					<!-- Line 1: auth command — always visible; typewriter runs once bootStep≥1 -->
+					<div class="term-line">
+						<span class="term-user">gitskit</span><span class="term-at">@</span><span class="term-host">xyz</span><span class="term-sep"> ~ % </span>
+						{#if bootStep >= 1}
+							<span class="term-cmd typewriter">auth --wallet</span>
+						{:else}
+							<span class="caret-only">▋</span>
+						{/if}
+					</div>
 
 					<!-- Line 2: checking -->
 					{#if bootStep >= 2}
@@ -612,21 +611,32 @@
 	}
 
 	.terminal {
-		background: #07070e;
-		border: 1px solid rgba(110,255,87,0.22);
+		background: #0b0b18;
+		border: 1px solid rgba(110,255,87,0.38);
 		border-radius: 11px;
 		box-shadow:
-			0 0 0 1px rgba(255,255,255,0.04) inset,
-			0 28px 72px rgba(0,0,0,0.65),
-			0 0 60px -20px rgba(110,255,87,0.18);
+			0 0 0 1px rgba(255,255,255,0.06) inset,
+			0 28px 72px rgba(0,0,0,0.7),
+			0 0 0 0 rgba(110,255,87,0),
+			0 0 50px -10px rgba(110,255,87,0.22);
 		overflow: hidden;
 		position: relative;
-		animation: termBorderPulse 4.5s ease-in-out infinite 2.5s;
+		animation: termBorderPulse 4s ease-in-out infinite 2s;
 	}
 
 	@keyframes termBorderPulse {
-		0%,100% { box-shadow: 0 0 0 1px rgba(255,255,255,0.04) inset, 0 28px 72px rgba(0,0,0,0.65), 0 0 40px -20px rgba(110,255,87,0.14); }
-		50%      { box-shadow: 0 0 0 1px rgba(255,255,255,0.04) inset, 0 28px 72px rgba(0,0,0,0.65), 0 0 80px -10px rgba(110,255,87,0.28); }
+		0%,100% {
+			box-shadow:
+				0 0 0 1px rgba(255,255,255,0.06) inset,
+				0 28px 72px rgba(0,0,0,0.7),
+				0 0 50px -10px rgba(110,255,87,0.18);
+		}
+		50% {
+			box-shadow:
+				0 0 0 1px rgba(255,255,255,0.06) inset,
+				0 28px 72px rgba(0,0,0,0.7),
+				0 0 90px -5px rgba(110,255,87,0.38);
+		}
 	}
 
 	/* CRT scanlines */
