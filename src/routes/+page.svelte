@@ -72,200 +72,361 @@ const transcribeRate = $derived(
 let heroCanvas: HTMLCanvasElement;
 
 onMount(() => {
-	const canvas = heroCanvas;
-	if (!canvas) return;
-	const ctx = canvas.getContext('2d');
-	if (!ctx) return;
+const canvas = heroCanvas;
+if (!canvas) return;
+const ctx = canvas.getContext('2d');
+if (!ctx) return;
 
-	// Palette — matches design tokens
-	const C_GREEN  = [110, 255,  87] as const;
-	const C_PURPLE = [168,  85, 247] as const;
-	const C_BLUE   = [  0, 200, 255] as const;
+let W = 0, H = 0, dpr = 1;
+let raf: number;
 
-	let W = 0, H = 0, dpr = 1;
-	let raf: number;
-
-	function resize() {
-		dpr = Math.min(window.devicePixelRatio || 1, 2);
-		W   = canvas.offsetWidth;
-		H   = canvas.offsetHeight;
-		canvas.width  = Math.round(W * dpr);
-		canvas.height = Math.round(H * dpr);
-		ctx.scale(dpr, dpr);
-	}
-
-	// ── Ambient orbs — 3 large blurred glows that breathe & drift ──
-	const orbs = [
-		{ rx: 0.12, ry: 0.35, r: 200, pal: C_GREEN,  ph: 0.0,  sp: 0.00042, dx: 0.13, dy: 0.11 },
-		{ rx: 0.85, ry: 0.28, r: 260, pal: C_PURPLE, ph: 1.85, sp: 0.00031, dx: 0.09, dy: 0.14 },
-		{ rx: 0.52, ry: 0.78, r: 180, pal: C_BLUE,   ph: 3.60, sp: 0.00055, dx: 0.17, dy: 0.08 },
-	];
-
-	// ── Film strip geometry ──────────────────────────────────────
-	const SW   = 24;   // strip width px
-	const PH   = 11;   // perforation height
-	const PW   = 7;    // perforation width
-	const PGAP = 26;   // perforation pitch
-
-	function draw(ts: number) {
-		ctx.clearRect(0, 0, W, H);
-		const t = ts * 0.001;
-
-		// 1 ── Ambient glowing orbs ──────────────────────────────
-		for (const o of orbs) {
-			const pulse = Math.sin(t * o.sp * 1000 + o.ph);
-			const gx    = o.rx * W + Math.sin(t * o.dx + o.ph) * 28;
-			const gy    = o.ry * H + Math.cos(t * o.dy + o.ph) * 18;
-			const r     = o.r  + pulse * 18;
-			const alpha = 0.055 + pulse * 0.018 + 0.015;
-			const [R, G, B] = o.pal;
-			const grad = ctx.createRadialGradient(gx, gy, 0, gx, gy, r);
-			grad.addColorStop(0,   `rgba(${R},${G},${B},${alpha})`);
-			grad.addColorStop(0.5, `rgba(${R},${G},${B},${(alpha * 0.38).toFixed(3)})`);
-			grad.addColorStop(1,   `rgba(${R},${G},${B},0)`);
-			ctx.fillStyle = grad;
-			ctx.beginPath();
-			ctx.ellipse(gx, gy, r, r * 0.72, 0, 0, Math.PI * 2);
-			ctx.fill();
-		}
-
-		// 2 ── Film strips (left = green, right = purple) ─────────
-		const perfOffset = (t * 14) % PGAP;
-
-		// Left strip
-		ctx.fillStyle = 'rgba(110,255,87,0.06)';
-		ctx.fillRect(0, 0, SW, H);
-		for (let y = -PGAP + perfOffset; y < H + PGAP; y += PGAP) {
-			const ry    = Math.round(y);
-			const frame = ((Math.floor((y + t * 14) / PGAP) + 4096) & 0xFFF);
-			ctx.fillStyle = 'rgba(110,255,87,0.22)';
-			ctx.fillRect(SW - PW - 4, ry + 2, PW, PH);
-			ctx.fillStyle = 'rgba(110,255,87,0.15)';
-			ctx.font      = '500 5.5px "JetBrains Mono",monospace';
-			ctx.textAlign = 'left';
-			ctx.fillText(frame.toString(16).toUpperCase().padStart(3,'0'), 2, ry + PH);
-		}
-		// Separator line
-		ctx.fillStyle = 'rgba(110,255,87,0.12)';
-		ctx.fillRect(SW, 0, 1, H);
-
-		// Right strip
-		ctx.fillStyle = 'rgba(168,85,247,0.06)';
-		ctx.fillRect(W - SW, 0, SW, H);
-		for (let y = -PGAP + perfOffset; y < H + PGAP; y += PGAP) {
-			const ry = Math.round(y);
-			ctx.fillStyle = 'rgba(168,85,247,0.22)';
-			ctx.fillRect(W - SW + 4, ry + 2, PW, PH);
-		}
-		ctx.fillStyle = 'rgba(168,85,247,0.12)';
-		ctx.fillRect(W - SW - 1, 0, 1, H);
-
-		// 3 ── Audio waveforms ────────────────────────────────────
-		const wY  = H * 0.74;
-		const wAm = H * 0.07;
-
-		// Primary — green
-		ctx.beginPath();
-		const wInner = W - SW * 2 - 2;
-		for (let i = 0; i <= wInner; i++) {
-			const nx = i / wInner;
-			const y  = wY
-				+ Math.sin(nx * Math.PI *  6 + t * 2.2) * wAm * 0.48
-				+ Math.sin(nx * Math.PI * 14 + t * 3.9) * wAm * 0.22
-				+ Math.sin(nx * Math.PI *  3 + t * 1.1) * wAm * 0.32;
-			i === 0 ? ctx.moveTo(SW + 1 + i, y) : ctx.lineTo(SW + 1 + i, y);
-		}
-		ctx.strokeStyle   = 'rgba(110,255,87,0.5)';
-		ctx.lineWidth     = 1.5;
-		ctx.shadowColor   = 'rgba(110,255,87,0.7)';
-		ctx.shadowBlur    = 7;
-		ctx.stroke();
-		ctx.shadowBlur = 0;
-
-		// Secondary — blue, offset up
-		ctx.beginPath();
-		for (let i = 0; i <= wInner; i++) {
-			const nx = i / wInner;
-			const y  = wY - 20
-				+ Math.sin(nx * Math.PI *  9 + t * 1.6 + 1.3) * wAm * 0.28
-				+ Math.sin(nx * Math.PI * 21 + t * 2.9 + 0.5) * wAm * 0.12;
-			i === 0 ? ctx.moveTo(SW + 1 + i, y) : ctx.lineTo(SW + 1 + i, y);
-		}
-		ctx.strokeStyle = 'rgba(0,200,255,0.22)';
-		ctx.lineWidth   = 1;
-		ctx.stroke();
-
-		// 4 ── Horizontal sweep line ───────────────────────────────
-		const sweepT = (t * 0.07) % 1.5;
-		if (sweepT < 1) {
-			const sy = sweepT * H;
-			const sg = ctx.createLinearGradient(0, sy - 14, 0, sy + 14);
-			sg.addColorStop(0,   'rgba(0,200,255,0)');
-			sg.addColorStop(0.5, 'rgba(0,200,255,0.1)');
-			sg.addColorStop(1,   'rgba(0,200,255,0)');
-			ctx.fillStyle = sg;
-			ctx.fillRect(SW, sy - 14, W - SW * 2, 28);
-		}
-
-		// 5 ── Timecode HUD ────────────────────────────────────────
-		const fr  = Math.floor(ts / (1000 / 24)) % 24;
-		const ss  = Math.floor(ts / 1000) % 60;
-		const mm  = Math.floor(ts / 60000) % 60;
-		const hh  = Math.floor(ts / 3600000) % 24;
-		const tc  = `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}:${String(ss).padStart(2,'0')}:${String(fr).padStart(2,'0')}`;
-		ctx.font       = '600 9px "JetBrains Mono",monospace';
-		ctx.fillStyle  = 'rgba(110,255,87,0.4)';
-		ctx.textAlign  = 'right';
-		ctx.fillText(tc, W - SW - 5, H - 7);
-
-		// ● REC blink
-		if (Math.floor(ts / 700) % 2 === 0) {
-			ctx.fillStyle = 'rgba(255,71,87,0.65)';
-			ctx.textAlign = 'left';
-			ctx.fillText('● REC', SW + 6, H - 7);
-		}
-		ctx.textAlign = 'left';
-
-		// 6 ── Sparks ────────────────────────────────────────────
-while (sparks.length < SPARK_COUNT) spawnSpark();
-for (let i = sparks.length - 1; i >= 0; i--) {
-  const s = sparks[i];
-  s.x    += s.vx;
-  s.y    += s.vy;
-  s.life += 1;
-  if (s.life > s.maxLife || s.x < SW || s.x > W - SW) { sparks.splice(i, 1); continue; }
-  const prog  = s.life / s.maxLife;
-  const alpha = prog < 0.15 ? prog / 0.15 : prog > 0.75 ? (1 - prog) / 0.25 : 1;
-  const [R, G, B] = s.pal;
-  ctx.beginPath();
-  ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-  ctx.fillStyle = `rgba(${R},${G},${B},${(alpha * 0.85).toFixed(3)})`;
-  ctx.shadowColor = `rgba(${R},${G},${B},${(alpha * 0.6).toFixed(3)})`;
-  ctx.shadowBlur  = 5;
-  ctx.fill();
-  ctx.shadowBlur = 0;
+function resize() {
+  dpr = Math.min(window.devicePixelRatio || 1, 2);
+  W   = canvas.offsetWidth;
+  H   = canvas.offsetHeight;
+  canvas.width  = Math.round(W * dpr);
+  canvas.height = Math.round(H * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
 
-// 7 ── Vignette ───────────────────────────────────────────
-		const vig = ctx.createRadialGradient(W / 2, H / 2, H * 0.18, W / 2, H / 2, H * 0.9);
-		vig.addColorStop(0, 'rgba(3,3,7,0)');
-		vig.addColorStop(1, 'rgba(3,3,7,0.6)');
-		ctx.fillStyle = vig;
-		ctx.fillRect(0, 0, W, H);
+// ── Layout constants ─────────────────────────────────────────
+const LABEL_W   = 42;   // left track-label column width
+const RULER_H   = 18;   // ruler height at bottom
+const HUD_H     = 22;   // top HUD bar
+const TRACK_GAP = 2;    // gap between tracks
+const PLAYHEAD_X_FRAC = 0.34; // playhead at 34% of timeline width
 
-		raf = requestAnimationFrame(draw);
-	}
+// ── Track definitions ────────────────────────────────────────
+const TRACKS = [
+  { id: 'V1', label: 'V1', kind: 'video', color: [110, 255, 87]   as const },
+  { id: 'V2', label: 'V2', kind: 'video', color: [168,  85, 247]  as const },
+  { id: 'A1', label: 'A1', kind: 'audio', color: [0,   200, 255]  as const },
+  { id: 'A2', label: 'A2', kind: 'audio', color: [255, 165,  50]  as const },
+  { id: 'SB', label: 'SB', kind: 'sub',   color: [255, 255, 255]  as const },
+];
 
-	resize();
-	raf = requestAnimationFrame(draw);
+// ── Clip data: [startSec, durationSec, label] ────────────────
+// Timeline is 30 "seconds" wide, scrolls continuously
+const CLIPS: Record<string, Array<[number, number, string]>> = {
+  V1: [[0,5,'interview-02'],[6,7,'broll-city'],[14,4,'cutaway-01'],[19,8,'main-wide'],[28,5,'closeup-03']],
+  V2: [[2,4,'broll-rain'],[8,6,'overlay-map'],[16,3,'transition'],[21,7,'alt-angle'],[30,4,'broll-hands']],
+  A1: [[0,8,'narration-a'],[9,5,'ambient'],[15,9,'interview-snd'],[25,9,'music-bed']],
+  A2: [[3,6,'foley-01'],[11,4,'sfx-wind'],[17,8,'bgm-low'],[27,7,'foley-02']],
+  SB: [[1,2,'The'],[2.5,2,'city'],[4.5,3,'never sleeps'],[8,2,'but'],[10,3,'we do'],[14,4,'cut here'],[19,2,'roll'],[21,3,'wide shot'],[25,4,'fade out']],
+};
 
-	const ro = new ResizeObserver(() => { ctx.setTransform(1,0,0,1,0,0); resize(); });
-	ro.observe(canvas);
+// ── Pre-generate waveform data for audio clips ────────────────
+const WAVE_SEED: number[] = [];
+for (let i = 0; i < 200; i++) WAVE_SEED.push(Math.random());
 
-	return () => {
-		cancelAnimationFrame(raf);
-		ro.disconnect();
-	};
+// ── Scroll state ─────────────────────────────────────────────
+// scrollSec = current timeline position at left edge (scrolls forward)
+const SCROLL_SPEED = 2.5; // seconds per real second
+
+function draw(ts: number) {
+  ctx.clearRect(0, 0, W, H);
+  const t = ts * 0.001;
+  const scrollSec = (t * SCROLL_SPEED) % 34; // loop every 34 "seconds"
+
+  const timelineW = W - LABEL_W;
+  const timelinePx = timelineW;        // total width in px for our 30s window
+  const secToPx = (sec: number) => sec * (timelinePx / 30); // px per second
+  const playheadX = LABEL_W + timelineW * PLAYHEAD_X_FRAC;
+
+  // Track height computation
+  const trackAreaH = H - HUD_H - RULER_H;
+  const nTracks = TRACKS.length;
+  const trackH = Math.floor((trackAreaH - TRACK_GAP * (nTracks - 1)) / nTracks);
+
+  // ── 1. Background ───────────────────────────────────────────
+  ctx.fillStyle = 'rgba(3,3,7,0.92)';
+  ctx.fillRect(0, 0, W, H);
+
+  // Subtle vignette
+  const vig = ctx.createRadialGradient(W*0.5, H*0.5, H*0.1, W*0.5, H*0.5, H*0.85);
+  vig.addColorStop(0, 'rgba(0,0,0,0)');
+  vig.addColorStop(1, 'rgba(0,0,0,0.45)');
+  ctx.fillStyle = vig;
+  ctx.fillRect(0, 0, W, H);
+
+  // ── 2. HUD bar ──────────────────────────────────────────────
+  ctx.fillStyle = 'rgba(10,10,18,0.9)';
+  ctx.fillRect(0, 0, W, HUD_H);
+  ctx.fillStyle = 'rgba(26,26,46,0.8)';
+  ctx.fillRect(0, HUD_H - 1, W, 1);
+
+  // Timecode
+  const curSec  = scrollSec + 30 * PLAYHEAD_X_FRAC;
+  const tcH     = Math.floor(curSec / 3600) % 24;
+  const tcM     = Math.floor(curSec / 60) % 60;
+  const tcS     = Math.floor(curSec) % 60;
+  const tcF     = Math.floor((curSec % 1) * 24);
+  const tc      = `${String(tcH).padStart(2,'0')}:${String(tcM).padStart(2,'0')}:${String(tcS).padStart(2,'0')}:${String(tcF).padStart(2,'0')}`;
+  ctx.font      = `600 9px "JetBrains Mono",monospace`;
+  ctx.fillStyle = 'rgba(110,255,87,0.9)';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(tc, LABEL_W + 6, HUD_H / 2);
+
+  // REC blink
+  if (Math.floor(ts / 900) % 2 === 0) {
+    ctx.fillStyle = 'rgba(255,71,87,0.8)';
+    ctx.textAlign = 'right';
+    ctx.fillText('● REC', W - 8, HUD_H / 2);
+  }
+
+  // Frame rate badge
+  ctx.fillStyle = 'rgba(80,80,120,0.7)';
+  ctx.textAlign = 'center';
+  ctx.fillText('24fps', W * 0.5, HUD_H / 2);
+
+  // ── 3. Label column background ──────────────────────────────
+  ctx.fillStyle = 'rgba(8,8,16,0.95)';
+  ctx.fillRect(0, HUD_H, LABEL_W, H - HUD_H);
+  ctx.fillStyle = 'rgba(26,26,46,0.9)';
+  ctx.fillRect(LABEL_W - 1, HUD_H, 1, H - HUD_H);
+
+  // ── 4. Draw each track ──────────────────────────────────────
+  TRACKS.forEach((track, ti) => {
+    const [R, G, B] = track.color;
+    const trackY = HUD_H + ti * (trackH + TRACK_GAP);
+
+    // Track background (alternating)
+    ctx.fillStyle = ti % 2 === 0
+      ? 'rgba(12,12,22,0.6)'
+      : 'rgba(8,8,16,0.4)';
+    ctx.fillRect(LABEL_W, trackY, timelineW, trackH);
+
+    // Track label
+    ctx.font = `600 8px "JetBrains Mono",monospace`;
+    ctx.fillStyle = `rgba(${R},${G},${B},0.75)`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(track.label, LABEL_W / 2, trackY + trackH / 2);
+
+    // Track label side accent
+    ctx.fillStyle = `rgba(${R},${G},${B},0.4)`;
+    ctx.fillRect(0, trackY, 2, trackH);
+
+    // Track grid lines (faint vertical ticks every 2 seconds)
+    for (let gridSec = 0; gridSec <= 30; gridSec += 2) {
+      const gx = LABEL_W + secToPx(gridSec - scrollSec % 2);
+      if (gx >= LABEL_W && gx <= W) {
+        ctx.fillStyle = 'rgba(26,26,46,0.5)';
+        ctx.fillRect(Math.round(gx), trackY, 1, trackH);
+      }
+    }
+
+    // Track separator line
+    if (ti < TRACKS.length - 1) {
+      ctx.fillStyle = 'rgba(26,26,46,0.8)';
+      ctx.fillRect(0, trackY + trackH, W, TRACK_GAP);
+    }
+
+    // ── Draw clips in this track ──────────────────────────────
+    const clips = CLIPS[track.id] ?? [];
+    clips.forEach(([startSec, durSec, label]) => {
+      // Repeat clips by cycling them across the scrolling timeline
+      // Each clip repeats every 34s cycle
+      for (let cycle = -1; cycle <= 2; cycle++) {
+        const clipStart = startSec + cycle * 34;
+        const clipEnd   = clipStart + durSec;
+        const cx1 = LABEL_W + secToPx(clipStart - scrollSec);
+        const cx2 = LABEL_W + secToPx(clipEnd   - scrollSec);
+
+        if (cx2 < LABEL_W || cx1 > W) continue;
+        const clipX = Math.max(cx1, LABEL_W);
+        const clipW = Math.min(cx2, W) - clipX;
+        if (clipW <= 0) continue;
+
+        // Is playhead crossing this clip?
+        const phOver = playheadX >= cx1 && playheadX <= cx2;
+        const alpha  = phOver ? 0.85 : 0.52;
+        const edgeAlpha = phOver ? 0.95 : 0.5;
+
+        // Clip body
+        const clipGrad = ctx.createLinearGradient(cx1, trackY + 2, cx1, trackY + trackH - 2);
+        clipGrad.addColorStop(0,   `rgba(${R},${G},${B},${alpha * 0.55})`);
+        clipGrad.addColorStop(0.5, `rgba(${R},${G},${B},${alpha * 0.38})`);
+        clipGrad.addColorStop(1,   `rgba(${R},${G},${B},${alpha * 0.55})`);
+        ctx.fillStyle = clipGrad;
+        ctx.beginPath();
+        ctx.roundRect(Math.max(cx1, LABEL_W), trackY + 2, clipW, trackH - 4, 2);
+        ctx.fill();
+
+        // Clip border
+        ctx.strokeStyle = `rgba(${R},${G},${B},${edgeAlpha})`;
+        ctx.lineWidth   = phOver ? 1.5 : 0.75;
+        ctx.stroke();
+
+        // Playhead-crossing glow
+        if (phOver) {
+          ctx.shadowColor = `rgba(${R},${G},${B},0.6)`;
+          ctx.shadowBlur  = 10;
+          ctx.stroke();
+          ctx.shadowBlur  = 0;
+        }
+
+        // ── Audio: waveform bars ────────────────────────────
+        if (track.kind === 'audio' && clipW > 10) {
+          const barW  = 2;
+          const barGap = 1;
+          const barStep = barW + barGap;
+          const waveY  = trackY + trackH * 0.5;
+          const waveAm = (trackH * 0.38);
+          let bi = 0;
+          for (let bx = clipX + 1; bx < Math.min(cx2, W) - barW; bx += barStep) {
+            const seed = WAVE_SEED[(bi + Math.floor(clipStart * 11)) % WAVE_SEED.length];
+            const amp  = (0.3 + seed * 0.7) * waveAm * (phOver ? 1.0 : 0.65);
+            const twitch = Math.sin(t * (3 + bi * 0.4) + bi) * 0.08 * waveAm;
+            const bh   = amp + twitch;
+            ctx.fillStyle = `rgba(${R},${G},${B},${phOver ? 0.75 : 0.5})`;
+            ctx.fillRect(Math.round(bx), Math.round(waveY - bh), barW, Math.round(bh * 2));
+            bi++;
+          }
+        }
+
+        // ── Video: subtle scan lines ─────────────────────────
+        if (track.kind === 'video' && clipW > 12) {
+          const scanStep = 4;
+          ctx.strokeStyle = `rgba(${R},${G},${B},0.06)`;
+          ctx.lineWidth   = 1;
+          for (let sy = trackY + 4; sy < trackY + trackH - 4; sy += scanStep) {
+            ctx.beginPath();
+            ctx.moveTo(Math.max(cx1, LABEL_W), sy);
+            ctx.lineTo(Math.min(cx2, W), sy);
+            ctx.stroke();
+          }
+          // Clip label (truncated)
+          if (clipW > 30 && cx1 > LABEL_W) {
+            ctx.font      = `500 7px "JetBrains Mono",monospace`;
+            ctx.fillStyle = `rgba(${R},${G},${B},0.7)`;
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+            const maxChars = Math.floor(clipW / 5.5);
+            const displayLabel = label.length > maxChars ? label.slice(0, maxChars - 1) + '…' : label;
+            ctx.fillText(displayLabel, cx1 + 4, trackY + trackH / 2);
+          }
+        }
+
+        // ── Subtitle markers ────────────────────────────────
+        if (track.kind === 'sub') {
+          const wordAlpha = phOver ? 0.9 : 0.5;
+          ctx.font      = `600 8px "JetBrains Mono",monospace`;
+          ctx.fillStyle = `rgba(${R},${G},${B},${wordAlpha})`;
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'middle';
+          if (cx1 > LABEL_W && clipW > 8) {
+            ctx.fillText(`"${label}"`, cx1 + 3, trackY + trackH / 2);
+          }
+        }
+      }
+    });
+  });
+
+  // ── 5. Ruler (bottom) ───────────────────────────────────────
+  const rulerY = H - RULER_H;
+  ctx.fillStyle = 'rgba(10,10,18,0.95)';
+  ctx.fillRect(LABEL_W, rulerY, timelineW, RULER_H);
+  ctx.fillStyle = 'rgba(26,26,46,0.9)';
+  ctx.fillRect(LABEL_W, rulerY, timelineW, 1);
+
+  // Ruler ticks + time labels
+  const minorStep = 0.5; // seconds between minor ticks
+  const majorStep = 2;   // seconds between major ticks
+  for (let sec = Math.floor(scrollSec); sec <= scrollSec + 32; sec += minorStep) {
+    const rx = LABEL_W + secToPx(sec - scrollSec);
+    if (rx < LABEL_W || rx > W) continue;
+    const isMajor = Math.round(sec / majorStep) * majorStep === Math.round(sec * 2) / 2;
+    const tickH = isMajor ? 7 : 4;
+    ctx.fillStyle = isMajor ? 'rgba(110,255,87,0.45)' : 'rgba(110,255,87,0.18)';
+    ctx.fillRect(Math.round(rx), rulerY + 1, 1, tickH);
+    if (isMajor && Math.round(sec * 2) % (majorStep * 2) === 0) {
+      const lSec = Math.round(sec);
+      const lM   = Math.floor(lSec / 60);
+      const lS   = lSec % 60;
+      ctx.font      = '500 7px "JetBrains Mono",monospace';
+      ctx.fillStyle = 'rgba(110,255,87,0.5)';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.fillText(`${String(lM).padStart(2,'0')}:${String(lS).padStart(2,'0')}`, rx, rulerY + 9);
+    }
+  }
+
+  // ── 6. Playhead ─────────────────────────────────────────────
+  const phPulse = 0.6 + Math.sin(t * 4) * 0.15;
+  // Playhead shadow/glow
+  const phGrad = ctx.createLinearGradient(playheadX - 8, 0, playheadX + 8, 0);
+  phGrad.addColorStop(0,   'rgba(255,255,255,0)');
+  phGrad.addColorStop(0.5, `rgba(255,255,255,${phPulse * 0.12})`);
+  phGrad.addColorStop(1,   'rgba(255,255,255,0)');
+  ctx.fillStyle = phGrad;
+  ctx.fillRect(playheadX - 8, HUD_H, 16, H - HUD_H);
+
+  // Playhead line
+  ctx.strokeStyle = `rgba(255,255,255,${phPulse})`;
+  ctx.lineWidth   = 1.5;
+  ctx.shadowColor = 'rgba(255,255,255,0.5)';
+  ctx.shadowBlur  = 6;
+  ctx.beginPath();
+  ctx.moveTo(Math.round(playheadX) + 0.5, HUD_H);
+  ctx.lineTo(Math.round(playheadX) + 0.5, H - RULER_H);
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  // Playhead top handle (diamond)
+  ctx.fillStyle  = `rgba(255,255,255,${phPulse})`;
+  ctx.beginPath();
+  ctx.moveTo(playheadX, HUD_H);
+  ctx.lineTo(playheadX + 5, HUD_H + 6);
+  ctx.lineTo(playheadX, HUD_H + 12);
+  ctx.lineTo(playheadX - 5, HUD_H + 6);
+  ctx.closePath();
+  ctx.fill();
+
+  // ── 7. Timeline / ruler label column bottom ──────────────────
+  ctx.fillStyle = 'rgba(8,8,16,0.95)';
+  ctx.fillRect(0, rulerY, LABEL_W, RULER_H);
+  ctx.font      = '600 7px "JetBrains Mono",monospace';
+  ctx.fillStyle = 'rgba(80,80,120,0.6)';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('TIME', LABEL_W / 2, rulerY + RULER_H / 2);
+
+  // ── 8. Active-track highlight (which track is playhead touching) ──
+  TRACKS.forEach((track, ti) => {
+    const trackY = HUD_H + ti * (trackH + TRACK_GAP);
+    const clips  = CLIPS[track.id] ?? [];
+    const [R, G, B] = track.color;
+    const phOver = clips.some(([startSec, durSec]) => {
+      for (let cycle = -1; cycle <= 2; cycle++) {
+        const cs = startSec + cycle * 34 - scrollSec;
+        const ce = cs + durSec;
+        const cx1 = LABEL_W + secToPx(cs);
+        const cx2 = LABEL_W + secToPx(ce);
+        if (playheadX >= cx1 && playheadX <= cx2) return true;
+      }
+      return false;
+    });
+    if (phOver) {
+      ctx.fillStyle = `rgba(${R},${G},${B},0.04)`;
+      ctx.fillRect(LABEL_W, trackY, timelineW, trackH);
+    }
+  });
+
+  raf = requestAnimationFrame(draw);
+}
+
+resize();
+raf = requestAnimationFrame(draw);
+
+const ro = new ResizeObserver(() => { ctx.setTransform(1,0,0,1,0,0); resize(); });
+ro.observe(canvas);
+
+return () => {
+  cancelAnimationFrame(raf);
+  ro.disconnect();
+};
 });
 </script>
 

@@ -255,7 +255,8 @@ mark, .mark {
 .topbar {
   position: sticky;
   top: 0;
-  z-index: 100;
+  z-index: 200;
+  isolation: isolate;
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -301,11 +302,15 @@ mark, .mark {
   gap: 0;
   margin-inline-start: 1.5rem;
   flex: 1;
+  position: relative;
+  z-index: 1;
+  pointer-events: auto;
 }
 
 .nav a {
   display: inline-flex;
   align-items: center;
+  pointer-events: auto;
   padding: 0.375rem 0.75rem;
   font-size: var(--fs-small);
   font-weight: 500;
@@ -389,7 +394,7 @@ mark, .mark {
 .mobile-menu {
   position: fixed;
   inset: 0;
-  z-index: 99;
+  z-index: 300;
   background: rgba(3, 3, 7, 0.95);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);

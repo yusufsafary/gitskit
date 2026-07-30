@@ -128,12 +128,9 @@
 		<!-- Header -->
 		<div class="login-header">
 			<a href="/" class="login-logo" aria-label="GitSkit home">
-				<Logo size={60} />
+				<Logo size={72} />
 			</a>
-			<div>
-				<h1 class="login-title">GitSkit</h1>
-				<p class="login-sub">Cut. Clip. Command.</p>
-			</div>
+			<p class="login-sub">Cut. Clip. Command.</p>
 		</div>
 
 		<!-- Devnet badge -->
