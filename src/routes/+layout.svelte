@@ -40,7 +40,6 @@ function closeMenu() {
 <header class="topbar">
 	<a href="/" class="wordmark" onclick={closeMenu}>
 		<Logo size={32} />
-		<span>GitSkit</span>
 	</a>
 	<nav class="nav desktop-nav" aria-label="Primary navigation">
 		{#each appLinks as link}
@@ -69,7 +68,6 @@ function closeMenu() {
 <header class="topbar">
 	<a href="/login" class="wordmark" onclick={closeMenu}>
 		<Logo size={32} />
-		<span>GitSkit</span>
 	</a>
 	<nav class="nav desktop-nav">
 		{#each infoLinks as link}
@@ -89,7 +87,6 @@ function closeMenu() {
 <header class="topbar">
 	<a href="/" class="wordmark" onclick={closeMenu}>
 		<Logo size={32} />
-		<span>GitSkit</span>
 	</a>
 	<nav class="nav desktop-nav">
 		{#each infoLinks as link}
@@ -142,7 +139,6 @@ function closeMenu() {
 	<div class="footer-inner">
 		<span class="footer-brand">
 			<Logo size={16} />
-			<span>GitSkit</span>
 		</span>
 		<span class="footer-copy">Cut. Clip. Command. &copy; {new Date().getFullYear()} gitskit.xyz</span>
 		<nav class="footer-nav" aria-label="Footer navigation">

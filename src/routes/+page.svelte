@@ -226,7 +226,27 @@ onMount(() => {
 		}
 		ctx.textAlign = 'left';
 
-		// 6 ── Vignette ───────────────────────────────────────────
+		// 6 ── Sparks ────────────────────────────────────────────
+while (sparks.length < SPARK_COUNT) spawnSpark();
+for (let i = sparks.length - 1; i >= 0; i--) {
+  const s = sparks[i];
+  s.x    += s.vx;
+  s.y    += s.vy;
+  s.life += 1;
+  if (s.life > s.maxLife || s.x < SW || s.x > W - SW) { sparks.splice(i, 1); continue; }
+  const prog  = s.life / s.maxLife;
+  const alpha = prog < 0.15 ? prog / 0.15 : prog > 0.75 ? (1 - prog) / 0.25 : 1;
+  const [R, G, B] = s.pal;
+  ctx.beginPath();
+  ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+  ctx.fillStyle = `rgba(${R},${G},${B},${(alpha * 0.85).toFixed(3)})`;
+  ctx.shadowColor = `rgba(${R},${G},${B},${(alpha * 0.6).toFixed(3)})`;
+  ctx.shadowBlur  = 5;
+  ctx.fill();
+  ctx.shadowBlur = 0;
+}
+
+// 7 ── Vignette ───────────────────────────────────────────
 		const vig = ctx.createRadialGradient(W / 2, H / 2, H * 0.18, W / 2, H / 2, H * 0.9);
 		vig.addColorStop(0, 'rgba(3,3,7,0)');
 		vig.addColorStop(1, 'rgba(3,3,7,0.6)');

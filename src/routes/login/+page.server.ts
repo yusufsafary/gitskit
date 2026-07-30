@@ -1,7 +1,6 @@
 import type { Actions, PageServerLoad } from './$types';
 import { fail, redirect } from '@sveltejs/kit';
 import {
-	checkPassword,
 	createSessionToken,
 	verifyWalletSignature,
 	consumeNonce,
@@ -17,24 +16,6 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 };
 
 export const actions: Actions = {
-	password: async ({ request, cookies, url }) => {
-		const data = await request.formData();
-		const password = String(data.get('password') ?? '');
-		if (!checkPassword(password)) {
-			return fail(401, { error: 'Incorrect password. Try again.' });
-		}
-		const token = createSessionToken('user:password');
-		cookies.set(COOKIE_NAME, token, {
-			path: '/',
-			httpOnly: true,
-			sameSite: 'lax',
-			secure: true,
-			maxAge: 60 * 60 * 24 * 7
-		});
-		const next = url.searchParams.get('next') ?? '/';
-		throw redirect(303, next);
-	},
-
 	wallet: async ({ request, cookies, url }) => {
 		const data = await request.formData();
 		const walletAddress = String(data.get('address') ?? '').trim();
